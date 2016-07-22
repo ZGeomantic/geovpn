@@ -8,28 +8,24 @@ import (
 )
 
 func main() {
-	srcPort := flag.String("from", "4001", "the port data stream come in, usually the swarm master connection")
-	destPort := flag.String("to", "4002", "the port data stream go to, usually the swarm node connection")
+	srcPort := flag.String("from", ":4001", "the port data stream come in, usually the swarm master connection")
+	destPort := flag.String("to", ":4002", "the port data stream go to, usually the swarm node connection")
 	mode := flag.String("mode", "chan", "use as a chan/recv/send")
 	flag.Parse()
 
 	switch *mode {
 	case "chan":
 		log.Printf("srcPort: %s, destPort: %s\n", *srcPort, *destPort)
-		srcAddr, err := net.ResolveTCPAddr("tcp", ":"+*srcPort)
-		checkErr(err)
-		destAddr, err := net.ResolveTCPAddr("tcp", ":"+*destPort)
-		checkErr(err)
 
 		log.Println("13")
-		channel, err := NewTCPChannel(srcAddr, destAddr)
+		channel, err := NewTCPChannel()
 		log.Println("14")
 		checkErr(err)
-		channel.Serve()
+		channel.Serve(*srcPort, *destPort)
 	case "recv":
-		Monitor(":" + *destPort)
+		Monitor(*destPort)
 	case "send":
-		Sender(":" + *srcPort)
+		Sender(*srcPort)
 	}
 
 	// 旧的示例代码
