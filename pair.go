@@ -182,28 +182,6 @@ func NewTCPChannel() (*TCPChannel, error) {
 	return channel, nil
 }
 
-// Monitor 用于仅作为接收端，显示数据，不再转发
-func Monitor(addr string) {
-	conn, err := net.Dial("tcp", addr)
-
-	if err != nil {
-		log.Printf("连接远程tcp端口失败： %s", err)
-		return
-	}
-
-	buffer := make([]byte, 1024)
-	for {
-		_, err = conn.Read(buffer)
-		if err != nil {
-			log.Printf("读取数据出错： %s", err)
-			os.Exit(1)
-		}
-		log.Printf("读取数据： %s", buffer)
-		conn.Write([]byte("哈哈，我收到了"))
-	}
-
-}
-
 // Sender 用于不断发送数据
 func Sender(addr string) {
 	conn, err := net.Dial("tcp", addr)
@@ -225,6 +203,26 @@ func Sender(addr string) {
 		resp := make([]byte, 1024)
 		conn.Read(resp)
 		log.Printf("收到响应： %s\n", resp)
+	}
+
+}
+func Monitor(addr string) {
+	conn, err := net.Dial("tcp", addr)
+
+	if err != nil {
+		log.Printf("连接远程tcp端口失败： %s", err)
+		return
+	}
+
+	buffer := make([]byte, 1024)
+	for {
+		_, err = conn.Read(buffer)
+		if err != nil {
+			log.Printf("读取数据出错： %s", err)
+			os.Exit(1)
+		}
+		log.Printf("读取数据： %s", buffer)
+		conn.Write([]byte("哈哈，我收到了"))
 	}
 
 }

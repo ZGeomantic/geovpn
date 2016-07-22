@@ -11,6 +11,10 @@ func main() {
 	srcPort := flag.String("from", ":4001", "the port data stream come in, usually the swarm master connection")
 	destPort := flag.String("to", ":4002", "the port data stream go to, usually the swarm node connection")
 	mode := flag.String("mode", "chan", "use as a chan/recv/send")
+	httpAddr := flag.String("http", ":4000", "http address to transfer data")
+	// vpnAddr := flag.String("vpn", "114.55.11.154:4002", "the remote vpn tcp address and port")
+	vpnAddr := flag.String("vpn", ":4002", "the remote vpn tcp address and port")
+
 	flag.Parse()
 
 	switch *mode {
@@ -26,6 +30,8 @@ func main() {
 		Monitor(*destPort)
 	case "send":
 		Sender(*srcPort)
+	case "client":
+		Client(*vpnAddr, *httpAddr)
 	}
 
 	// 旧的示例代码
