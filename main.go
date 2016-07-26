@@ -3,86 +3,33 @@ package main
 import (
 	"flag"
 	"log"
-	"net"
-	"os"
+)
+
+const (
+	READ_BUFFER_SIZE = 1024
 )
 
 func main() {
-	srcPort := flag.String("from", ":4001", "the port data stream come in, usually the swarm master connection")
-	destPort := flag.String("to", ":4002", "the port data stream go to, usually the swarm node connection")
+	log.SetFlags(log.Lshortfile | log.Ltime)
+	// 总参数
 	mode := flag.String("mode", "chan", "use as a chan/recv/send")
-	httpAddr := flag.String("http", ":4000", "http address to transfer data")
-	// vpnAddr := flag.String("vpn", "114.55.11.154:4002", "the remote vpn tcp address and port")
-	vpnAddr := flag.String("vpn", ":4002", "the remote vpn tcp address and port")
+	bridgePort := flag.String("bridge_port", ":4002", "the port that long TCP connection listensing on")
+
+	// 服务端参数
+	httpPort := flag.String("p", ":4001", "the port data stream come in, usually the swarm master connection")
+
+	// 客户端参数
+	offlineHTTPAddr := flag.String("offline_http", ":4000", "the client use to connect offline http server")
+	// vpnAddr := flag.String("remote_bridge_address", ":4002", "")// 可以和bridgePort参数合并
 
 	flag.Parse()
+	log.Printf("httpPort: %s, bridgePort: %s\n", *httpPort, *bridgePort)
 
 	switch *mode {
 	case "chan":
-		log.Printf("srcPort: %s, destPort: %s\n", *srcPort, *destPort)
-
-		log.Println("13")
-		channel, err := NewTCPChannel()
-		log.Println("14")
-		checkErr(err)
-		channel.Serve(*srcPort, *destPort)
-	case "recv":
-		Monitor(*destPort)
-	case "send":
-		Sender(*srcPort)
+		StartConnAgent(*httpPort, *bridgePort)
 	case "client":
-		Client(*vpnAddr, *httpAddr)
-	}
-
-	// 旧的示例代码
-	// tcpListener, err := net.ListenTCP("tcp", tcpAddr)
-	// log.Println("开始监听tcp端口" + tcpAddr.String())
-	// HandleTCPAccept(tcpListener)
-}
-
-// HandleTCPAccept 处理一个tcpListenser所接收到的conn
-func HandleTCPAccept(tcpListenser *net.TCPListener) {
-	for {
-		if tcpConn, err := tcpListenser.AcceptTCP(); err != nil {
-			log.Printf("Accept tcp connectioin err: %s\n", err)
-		} else {
-			go readTCPConn(tcpConn)
-		}
-
-	}
-}
-
-// 读取TCP连接中的信息
-func readTCPConn(tcpConn *net.TCPConn) {
-	// buffer, err := ioutil.ReadAll(tcpConn)
-	// if err != nil {
-	// 	log.Printf("一个tcp连接[%s]的读取失败，该连接即将关闭\n", tcpConn.RemoteAddr())
-	// 	tcpConn.Close()
-	// 	return
-	// }
-	// log.Printf("tcp连接[%s]受到的信息： %s\n", tcpConn.RemoteAddr(), buffer)
-	tcpConn.SetReadBuffer(1024)
-	buffer := make([]byte, 1024)
-	for {
-		// n, err := tcpConn.Read(buffer[0:])
-		_, err := tcpConn.Read(buffer)
-
-		if err != nil {
-			log.Printf("一个tcp连接[%s]的读取失败，该连接即将关闭\n", tcpConn.RemoteAddr())
-			tcpConn.Close()
-			return
-		}
-		log.Printf("tcp连接[%s]受到的信息： %s\n", tcpConn.RemoteAddr(), buffer)
-
-		// 为了让对方不会一直保持连接，这里先断开连接
-		tcpConn.Close()
-	}
-}
-
-func checkErr(err error) {
-	if err != nil {
-		log.Printf("Fatal error : %s", err.Error())
-		os.Exit(1)
+		StartConnMirror(*offlineHTTPAddr, *bridgePort)
 	}
 
 }
