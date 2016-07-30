@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	NS_LENGTH = 5
-)
-
 // Mux 用于在通信的tcp长连接中复用单线路的分发器
 type Mux struct {
 	router map[string]chan []byte

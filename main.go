@@ -6,7 +6,9 @@ import (
 )
 
 const (
-	READ_BUFFER_SIZE = 1024
+	READ_BUFFER_SIZE  = 1024
+	NS_LENGTH         = 5
+	WRITE_BUFFER_SIZE = READ_BUFFER_SIZE + NS_LENGTH
 )
 
 func main() {

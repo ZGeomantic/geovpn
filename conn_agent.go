@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"runtime"
 )
 
 // ConnAgent 代表着线上服务器把http请求封装成tcp的请求
@@ -17,8 +18,9 @@ type ConnAgent struct {
 // 处理server和client之间的长连接
 func (ag *ConnAgent) bridgePump() {
 
-	go readerPump(ag.bridgeConn, ag.bridgeUpStream)
-	// go writerPump(agent.bridgeConn, agent.bridgeDownStream)
+	go readerSegmentPump(ag.bridgeConn, ag.bridgeUpStream)
+	go writerSegmentPump(ag.bridgeConn, ag.bridgeDownStream)
+
 	log.Println("Agent开始监听连接")
 	for {
 		select {
@@ -38,7 +40,7 @@ func (ag *ConnAgent) bridgePump() {
 			}
 
 			log.Printf("bridge下发数据： %s\n", downstream)
-			ag.bridgeConn.Write(downstream)
+			ag.bridgeDownStream <- downstream
 		}
 	}
 }
@@ -86,7 +88,12 @@ func (ag *ConnAgent) ServeTCP(conn *net.TCPConn) {
 				return
 			}
 			// TODO：接收到的数据，加一个ns后转发给bridge
-			ag.bridgeDownStream <- ag.mux.EncodeMsg(ns, req)
+			log.Printf("agent收到http请求： %s\n", req)
+
+			reqRediret := ag.mux.EncodeMsg(ns, req)
+			log.Printf("agent收转发http请求： %s\n", reqRediret)
+			ag.bridgeDownStream <- reqRediret
+			runtime.Gosched()
 		}
 	}
 }

@@ -36,8 +36,8 @@ func StartConnMirror(offlineHttpAddr, bridgeAddr string) {
 }
 
 func (cm *ConnMirror) bridgePump() {
-	go readerPump(cm.bridgeConn, cm.bridgeDownStream)
-	go writerPump(cm.bridgeConn, cm.bridgeUpStream)
+	go readerSegmentPump(cm.bridgeConn, cm.bridgeDownStream)
+	go writerSegmentPump(cm.bridgeConn, cm.bridgeUpStream)
 
 	for {
 		select {
@@ -108,33 +108,4 @@ func (mw *MirrorWorker) Loop() {
 		}
 
 	}
-}
-
-func connectHTTPaa(httpAddr string, data chan []byte) error {
-	conn, err := net.Dial("tcp", httpAddr)
-
-	if err != nil {
-		log.Printf("http请求，以tcp方式连接端口失败： %s", err)
-		return err
-	}
-
-	for {
-		content := <-data
-		log.Printf("准备发送http请求")
-		_, err = conn.Write(content)
-		if err != nil {
-			log.Printf("发送http数据失败： %s", err)
-			return err
-		}
-
-		log.Printf("准备接受http响应")
-		resp := make([]byte, 1024)
-		_, err = conn.Read(resp)
-		data <- resp
-		if err != nil {
-			log.Printf("接收http数据失败： %s", err)
-			return err
-		}
-	}
-
 }

@@ -44,8 +44,24 @@ func startTCPHandler(tcpAddr string, handler TCPHandler) error {
 
 // readerPump 把tcp连接中的内容全部读取到管道readChan中
 func readerPump(conn net.Conn, readChan chan []byte) {
-	buffer := make([]byte, READ_BUFFER_SIZE)
 	for {
+		buffer := make([]byte, READ_BUFFER_SIZE)
+		n, err := conn.Read(buffer)
+		if err != nil {
+			log.Printf("读取连接失败： %s\n", err)
+			log.Printf("此连接即将关闭\n")
+			conn.Close()
+			close(readChan)
+			return
+		}
+		readChan <- buffer[:n]
+	}
+}
+
+// readerSegmentPump 用于读取带ns头部的内容，用于在收发通过内部bridge通信的tcp数据包
+func readerSegmentPump(conn net.Conn, readChan chan []byte) {
+	for {
+		buffer := make([]byte, READ_BUFFER_SIZE+NS_LENGTH)
 		n, err := conn.Read(buffer)
 		if err != nil {
 			log.Printf("读取连接失败： %s\n", err)
@@ -62,6 +78,7 @@ func readerPump(conn net.Conn, readChan chan []byte) {
 func writerPump(conn net.Conn, writeChan chan []byte) {
 	for {
 		bs := <-writeChan
+
 		if _, err := conn.Write(bs); err != nil {
 			log.Printf("连接写数据失败： %s\n", err)
 			log.Printf("此连接即将关闭\n")
@@ -69,5 +86,26 @@ func writerPump(conn net.Conn, writeChan chan []byte) {
 			close(writeChan)
 			return
 		}
+
+	}
+}
+
+func writerSegmentPump(conn net.Conn, writeChan chan []byte) {
+	for {
+		bs := <-writeChan
+		for i := 0; i < len(bs); i = i + WRITE_BUFFER_SIZE {
+			endPos := i + WRITE_BUFFER_SIZE
+			if i+WRITE_BUFFER_SIZE >= len(bs) {
+				endPos = len(bs)
+			}
+			if _, err := conn.Write(bs[i:endPos]); err != nil {
+				log.Printf("连接写数据失败： %s\n", err)
+				log.Printf("此连接即将关闭\n")
+				conn.Close()
+				close(writeChan)
+				return
+			}
+		}
+
 	}
 }
