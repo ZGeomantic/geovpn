@@ -23,7 +23,7 @@ func (mux *Mux) Dispatch(msg []byte) {
 	// 把裁剪掉头部的msg传入相应的router
 	channel, ok := mux.router[ns]
 	if !ok {
-		log.Println("丢弃消息，因为没有注册该ns")
+		log.Printf("丢弃消息，因为没有注册该ns: [%s]", ns)
 		return
 	}
 	channel <- body

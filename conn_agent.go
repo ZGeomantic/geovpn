@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net"
-	"runtime"
 )
 
 // ConnAgent 代表着线上服务器把http请求封装成tcp的请求
@@ -33,14 +32,6 @@ func (ag *ConnAgent) bridgePump() {
 			// 把bridge返回的响应分发到对应的conn的write chan中，然后conn会自动把属于自己write chan的内容写回conn
 			ag.mux.Dispatch(upstream)
 
-		case downstream, ok := <-ag.bridgeDownStream:
-			if !ok {
-				log.Println("bridge的bridgeDownStream关闭，Agent也即将暂停")
-				return
-			}
-
-			log.Printf("bridge下发数据： %s\n", downstream)
-			ag.bridgeDownStream <- downstream
 		}
 	}
 }
@@ -93,7 +84,6 @@ func (ag *ConnAgent) ServeTCP(conn *net.TCPConn) {
 			reqRediret := ag.mux.EncodeMsg(ns, req)
 			log.Printf("agent收转发http请求： %s\n", reqRediret)
 			ag.bridgeDownStream <- reqRediret
-			runtime.Gosched()
 		}
 	}
 }

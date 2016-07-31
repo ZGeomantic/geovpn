@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
 )
@@ -42,14 +43,18 @@ func startTCPHandler(tcpAddr string, handler TCPHandler) error {
 	}
 }
 
-// readerPump 把tcp连接中的内容全部读取到管道readChan中
-func readerPump(conn net.Conn, readChan chan []byte) {
+func readStream(conn net.Conn, readChan chan []byte, readlength int) {
 	for {
-		buffer := make([]byte, READ_BUFFER_SIZE)
+		buffer := make([]byte, readlength)
 		n, err := conn.Read(buffer)
+
 		if err != nil {
-			log.Printf("读取连接失败： %s\n", err)
-			log.Printf("此连接即将关闭\n")
+			if err == io.EOF {
+				log.Printf("读取连接结束\n")
+			} else {
+				log.Printf("读取连接失败： %s\n", err)
+			}
+			log.Printf("连接[%s]即将关闭\n", conn.RemoteAddr())
 			conn.Close()
 			close(readChan)
 			return
@@ -58,20 +63,14 @@ func readerPump(conn net.Conn, readChan chan []byte) {
 	}
 }
 
+// readerPump 把tcp连接中的内容全部读取到管道readChan中
+func readerPump(conn net.Conn, readChan chan []byte) {
+	readStream(conn, readChan, READ_BUFFER_SIZE)
+}
+
 // readerSegmentPump 用于读取带ns头部的内容，用于在收发通过内部bridge通信的tcp数据包
 func readerSegmentPump(conn net.Conn, readChan chan []byte) {
-	for {
-		buffer := make([]byte, READ_BUFFER_SIZE+NS_LENGTH)
-		n, err := conn.Read(buffer)
-		if err != nil {
-			log.Printf("读取连接失败： %s\n", err)
-			log.Printf("此连接即将关闭\n")
-			conn.Close()
-			close(readChan)
-			return
-		}
-		readChan <- buffer[:n]
-	}
+	readStream(conn, readChan, READ_BUFFER_SIZE+NS_LENGTH)
 }
 
 // 把writeChan中的内容作为tcp连接的返回内容
@@ -100,7 +99,7 @@ func writerSegmentPump(conn net.Conn, writeChan chan []byte) {
 			}
 			if _, err := conn.Write(bs[i:endPos]); err != nil {
 				log.Printf("连接写数据失败： %s\n", err)
-				log.Printf("此连接即将关闭\n")
+				log.Printf("连接[%s]即将关闭\n", conn.RemoteAddr())
 				conn.Close()
 				close(writeChan)
 				return
